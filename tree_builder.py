@@ -43,7 +43,7 @@ class FairyStockfishEngine:
         if Path('variants.ini').exists():
             self.send("load variants.ini")
         self.send(f"setoption name UCI_Variant value {VARIANT}")
-        if Path(NNUE).exists():
+        if NNUE and Path(NNUE).exists():
             self.send(f"setoption name EvalFile value {NNUE}")
             self.send("setoption name Use NNUE value true")
         else:
@@ -279,7 +279,7 @@ def main():
     if Path(args.engine).exists():
         ENGINE = args.engine
     else:
-        print(f"Error: Engine not found at {engine_path}")
+        print(f"Error: Engine not found at {args.engine}")
         sys.exit(1)
     VARIANT = args.variant
     NNUE = args.nnue
@@ -294,4 +294,5 @@ def main():
     builder.build()
 
 if __name__ == '__main__':
+
     main()
