@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adaptive Tree Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            height: 100vh;
+            overflow: hidden;
+            margin: 0;
+        }
+
+        /* Main Container */
+        .main-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Left Panel */
+        .board-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* Board */
+        .board {
+            display: grid;
+            border: 2px solid #333;
+            background: #333;
+        }
+
+        .square {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .square.light {
+            background: #f0d9b5;
+        }
+
+        .square.dark {
+            background: #b58863;
+        }
+
+        /* Piece font size will be set dynamically */
+        .piece {
+            position: absolute;
+            user-select: none;
+        }
+
+        /* Navigation Controls */
+        .nav-controls {
+            display: flex;
+        }
+
+        .nav-btn {
+            background: #1976d2;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 2px;
+            transition: background 0.2s;
+        }
+
+        .nav-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .nav-btn:not(:disabled):hover {
+            background: #1565c0;
+        }
+
+        /* Right Panel */
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        /* Moves Panel */
+        .moves-panel {
+            flex: 0 0 auto;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            height: 50%;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        .load-btn {
+            background: #1976d2;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .load-btn:hover {
+            background: #1565c0;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        /* Moves Content Grid */
+        .moves-content-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .moves-grid {
+            display: grid;
+            grid-template-columns: 30% 70%;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .moves-column {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        /* Moves List */
+        .moves-list {
+            display: grid;
+            grid-template-rows: repeat(3, 1fr);
+            overflow: hidden;
+        }
+
+        .move-item {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .move-item:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .move-row {
+            display: flex;
+            align-items: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .move-eval {
+            margin-left: auto;
+            border-radius: 3px;
+            font-weight: 700;
+        }
+
+        .eval-positive {
+            background: rgba(76, 175, 80, 0.3);
+            color: #81c784;
+        }
+
+        .eval-negative {
+            background: rgba(244, 67, 54, 0.3);
+            color: #ff7777;
+        }
+
+        .eval-mate {
+            background: rgba(255, 193, 7, 0.3);
+            color: #ffdb58;
+        }
+
+        .move-continuation {
+            color: rgba(255, 255, 255, 0.5);
+            font-family: monospace;
+        }
+
+        /* Path Display */
+        .path-container {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+            overflow-y: auto;
+        }
+
+        .path-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .path-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .path-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .path-text {
+            color: white;
+            font-family: monospace;
+            line-height: 2;
+            word-break: break-word;
+        }
+
+        /* FEN Display */
+        .fen-section {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 3px;
+        }
+
+        .fen-text {
+            color: white;
+            font-family: monospace;
+            word-break: break-all;
+        }
+
+        /* Graph Panel */
+        .graph-panel {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .graph-canvas {
+            flex: 1;
+            background: white;
+            border-radius: 3px;
+            position: relative;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        #analysisGraph {
+            width: 100%;
+            height: 100%;
+            display: block;
+            border-radius: 3px;
+        }
+
+        #analysisGraph:fullscreen {
+            background: white;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            border-radius: 4px;
+            color: white;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .toast-success {
+            background: #4caf50;
+        }
+
+        .toast-error {
+            background: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Board Section -->
+        <div class="board-section">
+            <div class="board" id="board"></div>
+            
+            <div class="nav-controls">
+                <button class="nav-btn" id="startBtn" title="Start">⮜</button>
+                <button class="nav-btn" id="backBtn" title="Back">◀</button>
+                <button class="nav-btn" id="forwardBtn" title="Forward">▶</button>
+                <button class="nav-btn" id="endBtn" title="End">⮞</button>
+            </div>
+
+        </div>
+
+        <!-- Right Panel -->
+        <div class="right-panel">
+            <!-- Moves Panel -->
+            <div class="moves-panel">
+                <div class="panel-header">
+                    <button class="load-btn" onclick="document.getElementById('bookInput').click()">
+                        Load JSON
+                    </button>
+                    <input type="file" id="bookInput" class="file-input" accept=".json" onchange="loadBookFile(event)">
+                </div>
+                
+                <div class="moves-content-wrapper">
+                    <div class="moves-grid">
+                        <div class="moves-column">
+                            <div class="moves-list" id="movesList"></div>
+                        </div>
+                        
+                        <div class="moves-column">
+                            <div class="path-container">
+                                <div class="path-text" id="pathDisplay">Start position</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="fen-section">
+                        <div class="fen-text" id="currentFen">rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Graph Panel -->
+            <div class="graph-panel">
+                <div class="panel-header" style="justify-content: flex-end;">
+                    <div style="display: flex; gap: 8px;">
+                        <button class="load-btn" onclick="document.getElementById('logInput').click()">
+                            Load LOG
+                        </button>
+                        <button class="load-btn" onclick="openFullscreen()">
+                            Fullscreen
+                        </button>
+                        <input type="file" id="logInput" class="file-input" accept=".log,.txt" onchange="loadLogFile(event)">
+                    </div>
+                </div>
+                
+                <div class="graph-canvas">
+                    <canvas id="analysisGraph"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let bookData = null;
+        let currentFEN = '';
+        let moveHistory = [];
+        let logData = [];
+        let boardDimensions = { files: 8, ranks: 8 };
+        
+        // Chess pieces
+        const pieces = {
+            'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
+            'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+        };
+
+        // Get board dimensions from FEN
+        function getBoardDimensions(fen) {
+            const position = fen.split(' ')[0];
+            const rows = position.split('/');
+            const ranks = rows.length;
+            
+            let maxFiles = 0;
+            rows.forEach(row => {
+                let files = 0;
+                for (let char of row) {
+                    if (!isNaN(char)) {
+                        files += parseInt(char);
+                    } else {
+                        files++;
+                    }
+                }
+                maxFiles = Math.max(maxFiles, files);
+            });
+            
+            return { files: maxFiles, ranks: ranks };
+        }
+
+        // Calculate board size based on viewport
+        function calculateBoardSize() {
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            // Use default dimensions if not set
+            const files = boardDimensions.files || 8;
+            const ranks = boardDimensions.ranks || 8;
+            
+            // Determine short and long sides of display
+            const displayShortSide = Math.min(viewportWidth, viewportHeight);
+            const displayLongSide = Math.max(viewportWidth, viewportHeight);
+            
+            // Calculate base unit size (everything scales from this)
+            // Increased from /80 to /60 for larger elements
+            const baseUnit = displayShortSide / 60;
+            
+            // Calculate padding and gaps
+            const basePadding = baseUnit * 1.2;
+            const gap = baseUnit * 1;
+            
+            // Calculate nav button dimensions
+            const navButtonHeight = baseUnit * 5.5;
+            const navButtonWidth = navButtonHeight * 1.6;
+            const navButtonGap = navButtonHeight * 0.18;
+            
+            // Calculate board size
+            const maxBoardFromShort = displayShortSide - 2 * basePadding - navButtonHeight - gap;
+            const maxBoardFromLong = 0.75 * displayLongSide;
+            const boardMaxLength = Math.min(maxBoardFromShort, maxBoardFromLong);
+            
+            // Calculate square size
+            const maxDimension = Math.max(files, ranks);
+            const squareSize = Math.floor(boardMaxLength / maxDimension);
+            
+            // All sizes scale proportionally with baseUnit (increased multipliers for better readability)
+            return {
+                boardWidth: squareSize * files,
+                boardHeight: squareSize * ranks,
+                squareSize: squareSize,
+                navButtonWidth: Math.floor(navButtonWidth),
+                navButtonHeight: Math.floor(navButtonHeight),
+                navButtonFontSize: Math.floor(navButtonHeight * 0.6),
+                navButtonGap: Math.floor(navButtonGap),
+                padding: Math.floor(basePadding),
+                gap: Math.floor(gap),
+                // All UI elements scale with baseUnit - increased multipliers
+                loadBtnPadding: Math.floor(baseUnit * 0.5) + 'px ' + Math.floor(baseUnit * 1.2) + 'px',
+                loadBtnFontSize: Math.floor(baseUnit * 1.5),
+                moveFontSize: Math.floor(baseUnit * 2.2),
+                moveEvalFontSize: Math.floor(baseUnit * 2.2),
+                pathFontSize: Math.floor(baseUnit * 1.8),
+                fenFontSize: Math.floor(baseUnit * 1.5),
+                panelPadding: Math.floor(baseUnit * 0.8),
+                sectionPadding: Math.floor(baseUnit * 0.5),
+                moveEvalPadding: Math.floor(baseUnit * 0.2) + 'px ' + Math.floor(baseUnit * 0.8) + 'px',
+                continuationFontSize: Math.floor(baseUnit * 1.6),
+                toastPadding: Math.floor(baseUnit * 1) + 'px ' + Math.floor(baseUnit * 1.5) + 'px',
+                toastFontSize: Math.floor(baseUnit * 2.2),
+                baseUnit: baseUnit // Store for reference
+            };
+        }
+
+        // Update all dynamic sizes
+        function updateAllSizes() {
+            const sizes = calculateBoardSize();
+            const board = document.getElementById('board');
+            const boardSection = document.querySelector('.board-section');
+            const mainContainer = document.querySelector('.main-container');
+            
+            // Update main container
+            mainContainer.style.padding = sizes.padding + 'px';
+            mainContainer.style.gap = sizes.gap + 'px';
+            
+            // Update board
+            const files = boardDimensions.files || 8;
+            const ranks = boardDimensions.ranks || 8;
+            
+            board.style.width = sizes.boardWidth + 'px';
+            board.style.height = sizes.boardHeight + 'px';
+            board.style.gridTemplateColumns = `repeat(${files}, ${sizes.squareSize}px)`;
+            board.style.gridTemplateRows = `repeat(${ranks}, ${sizes.squareSize}px)`;
+            boardSection.style.width = (sizes.boardWidth + 4) + 'px';
+            boardSection.style.gap = sizes.gap + 'px';
+            
+            // Update nav controls
+            const navControls = document.querySelector('.nav-controls');
+            navControls.style.gap = sizes.navButtonGap + 'px';
+            
+            const navButtons = document.querySelectorAll('.nav-btn');
+            navButtons.forEach(btn => {
+                btn.style.width = sizes.navButtonWidth + 'px';
+                btn.style.height = sizes.navButtonHeight + 'px';
+                btn.style.fontSize = sizes.navButtonFontSize + 'px';
+            });
+            
+            // Update right panel
+            const rightPanel = document.querySelector('.right-panel');
+            if (rightPanel) {
+                rightPanel.style.gap = sizes.gap + 'px';
+            }
+            
+            // Update load buttons
+            const loadButtons = document.querySelectorAll('.load-btn');
+            loadButtons.forEach(btn => {
+                btn.style.padding = sizes.loadBtnPadding;
+                btn.style.fontSize = sizes.loadBtnFontSize + 'px';
+            });
+            
+            // Update panel headers
+            const panelHeaders = document.querySelectorAll('.panel-header');
+            panelHeaders.forEach(header => {
+                header.style.marginBottom = sizes.sectionPadding + 'px';
+            });
+            
+            // Update panels
+            const panels = document.querySelectorAll('.moves-panel, .graph-panel');
+            panels.forEach(panel => {
+                panel.style.padding = sizes.panelPadding + 'px';
+            });
+            
+            // Update moves grid
+            const movesGrid = document.querySelector('.moves-grid');
+            if (movesGrid) {
+                movesGrid.style.gap = sizes.gap + 'px';
+            }
+            
+            // Update moves list
+            const movesList = document.getElementById('movesList');
+            if (movesList) {
+                movesList.style.gap = Math.floor(sizes.baseUnit * 0.4) + 'px';
+            }
+            
+            // Update move items
+            const moveItems = document.querySelectorAll('.move-item');
+            moveItems.forEach(item => {
+                item.style.padding = Math.floor(sizes.baseUnit * 0.6) + 'px ' + Math.floor(sizes.baseUnit * 0.9) + 'px';
+                item.style.marginBottom = Math.floor(sizes.baseUnit * 0.2) + 'px';
+            });
+            
+            // Update move rows
+            const moveRows = document.querySelectorAll('.move-row');
+            moveRows.forEach(row => {
+                row.style.fontSize = sizes.moveFontSize + 'px';
+            });
+            
+            // Update move evaluations
+            const moveEvals = document.querySelectorAll('.move-eval');
+            moveEvals.forEach(eval => {
+                eval.style.fontSize = sizes.moveEvalFontSize + 'px';
+                eval.style.padding = sizes.moveEvalPadding;
+            });
+            
+            // Update move continuations
+            const moveContinuations = document.querySelectorAll('.move-continuation');
+            moveContinuations.forEach(cont => {
+                cont.style.fontSize = sizes.continuationFontSize + 'px';
+                cont.style.marginTop = Math.floor(sizes.baseUnit * 0.2) + 'px';
+            });
+            
+            // Update path display
+            const pathText = document.querySelector('.path-text');
+            if (pathText) pathText.style.fontSize = sizes.pathFontSize + 'px';
+            
+            const pathContainer = document.querySelector('.path-container');
+            if (pathContainer) pathContainer.style.padding = sizes.sectionPadding + 'px';
+            
+            // Update FEN display
+            const fenText = document.querySelector('.fen-text');
+            if (fenText) fenText.style.fontSize = sizes.fenFontSize + 'px';
+            
+            const fenSection = document.querySelector('.fen-section');
+            if (fenSection) fenSection.style.padding = sizes.sectionPadding + 'px ' + sizes.sectionPadding + 'px';
+            
+            // Update squares
+            const squares = document.querySelectorAll('.square');
+            squares.forEach(square => {
+                square.style.width = sizes.squareSize + 'px';
+                square.style.height = sizes.squareSize + 'px';
+                square.style.fontSize = Math.floor(sizes.squareSize * 0.85) + 'px';
+            });
+            
+            return sizes;
+        }
+
+        // Initialize or reinitialize board with dynamic dimensions
+        function initBoard(fen = null) {
+            if (fen) {
+                boardDimensions = getBoardDimensions(fen);
+            }
+            
+            const board = document.getElementById('board');
+            const files = boardDimensions.files || 8;
+            const ranks = boardDimensions.ranks || 8;
+            
+            // Update all sizes
+            const sizes = updateAllSizes();
+            
+            // Clear and recreate squares
+            board.innerHTML = '';
+            
+            for (let row = 0; row < ranks; row++) {
+                for (let col = 0; col < files; col++) {
+                    const square = document.createElement('div');
+                    square.className = `square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
+                    square.dataset.row = row;
+                    square.dataset.col = col;
+                    square.style.width = sizes.squareSize + 'px';
+                    square.style.height = sizes.squareSize + 'px';
+                    square.style.fontSize = Math.floor(sizes.squareSize * 0.85) + 'px';
+                    board.appendChild(square);
+                }
+            }
+            
+            if (fen) {
+                setPosition(fen);
+            }
+        }
+
+        // Set position on board
+        function setPosition(fen) {
+            currentFEN = fen;
+            const parts = fen.split(' ');
+            const position = parts[0];
+            const rows = position.split('/');
+            const squares = document.querySelectorAll('.square');
+            
+            squares.forEach(sq => sq.innerHTML = '');
+            
+            rows.forEach((row, rowIndex) => {
+                let colIndex = 0;
+                for (let char of row) {
+                    if (!isNaN(char)) {
+                        colIndex += parseInt(char);
+                    } else {
+                        const square = document.querySelector(
+                            `[data-row="${rowIndex}"][data-col="${colIndex}"]`
+                        );
+                        if (square && pieces[char]) {
+                            const piece = document.createElement('span');
+                            piece.className = 'piece';
+                            piece.textContent = pieces[char];
+                            square.appendChild(piece);
+                        }
+                        colIndex++;
+                    }
+                }
+            });
+        }
+
+        // Load book file
+        async function loadBookFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            try {
+                const text = await file.text();
+                const data = JSON.parse(text);
+                
+                // Handle both formats
+                if (data.positions) {
+                    bookData = data.positions;
+                    if (data.root_fen) {
+                        // Reinitialize board with root FEN dimensions
+                        initBoard(data.root_fen);
+                        moveHistory = [];
+                        displayPosition(data.root_fen);
+                        showToast(`Loaded ${Object.keys(bookData).length} positions`, 'success');
+                        return;
+                    }
+                } else {
+                    bookData = data;
+                }
+                
+                // Find start FEN and initialize
+                moveHistory = [];
+                const startFen = Object.keys(bookData).find(fen => 
+                    fen.includes('rnbqkbnr/pppppppp')) || Object.keys(bookData)[0];
+                
+                initBoard(startFen);
+                displayPosition(startFen);
+                showToast(`Loaded ${Object.keys(bookData).length} positions`, 'success');
+                
+            } catch (error) {
+                showToast('Error loading file', 'error');
+                console.error(error);
+            }
+        }
+
+        // Load log file
+        async function loadLogFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            try {
+                const text = await file.text();
+                parseLogFile(text);
+                setTimeout(() => drawGraph(), 50);
+                showToast(`Loaded ${logData.length} analyses`, 'success');
+            } catch (error) {
+                showToast('Error loading log', 'error');
+            }
+        }
+
+        // Parse log file
+        function parseLogFile(text) {
+            logData = [];
+            const lines = text.split('\n');
+            let currentAnalysis = null;
+            let analysisCount = 0;
+            
+            for (const line of lines) {
+                const trimmed = line.trim();
+                
+                if (trimmed.startsWith('cp ') || trimmed.startsWith('mate ')) {
+                    if (currentAnalysis) {
+                        logData.push(currentAnalysis);
+                    }
+                    
+                    analysisCount++;
+                    currentAnalysis = {
+                        number: analysisCount,
+                        eval: 0,
+                        alternatives: []
+                    };
+                    
+                    if (trimmed.startsWith('cp ')) {
+                        currentAnalysis.eval = parseInt(trimmed.split(' ')[1]) / 100;
+                    } else if (trimmed.startsWith('mate ')) {
+                        const mateIn = parseInt(trimmed.split(' ')[1]);
+                        currentAnalysis.eval = mateIn > 0 ? 100 : -100;
+                    }
+                }
+                
+                if (trimmed.startsWith('alt') && currentAnalysis) {
+                    const parts = trimmed.split(' ');
+                    if (parts.length >= 4) {
+                        const altEval = parts[2] === 'cp' ? 
+                            parseInt(parts[3]) / 100 : 
+                            (parts[2] === 'mate' ? (parseInt(parts[3]) > 0 ? 100 : -100) : 0);
+                        
+                        currentAnalysis.alternatives.push({
+                            move: parts[1],
+                            eval: altEval
+                        });
+                    }
+                }
+            }
+            
+            if (currentAnalysis) {
+                logData.push(currentAnalysis);
+            }
+        }
+
+        // Display position
+        function displayPosition(fen) {
+            const movesList = document.getElementById("movesList");
+            movesList.innerHTML = "";
+            
+            // Get current sizes
+            const sizes = calculateBoardSize();
+            
+            // Update moves list gap
+            movesList.style.gap = Math.floor(sizes.baseUnit * 0.4) + 'px';
+            
+            // Update moves grid gap
+            const movesGrid = document.querySelector('.moves-grid');
+            if (movesGrid) {
+                movesGrid.style.gap = sizes.gap + 'px';
+            }
+            
+            // Update path display
+            const pathDisplay = document.getElementById("pathDisplay");
+            if (moveHistory.length > 0) {
+                pathDisplay.textContent = moveHistory.map(m => m.move).join(" ");
+            } else {
+                pathDisplay.textContent = "Start position";
+            }
+
+            let movesData = [];
+
+            if (bookData && fen) {
+                currentFEN = fen;
+                setPosition(fen);
+                document.getElementById("currentFen").textContent = fen;
+
+                const position = bookData[fen];
+                if (position && position.moves_to_children) {
+                    position.moves_to_children.forEach((move, index) => {
+                        const childFen = position.children_fens[index];
+                        const childPos = bookData[childFen];
+                        if (!childPos) return;
+
+                        let evalValue = 0;
+                        let evalText = "";
+                        let evalClass = "";
+
+                        if (childPos.mate_in !== null && childPos.mate_in !== undefined) {
+                            evalText = `M${Math.abs(childPos.mate_in)}`;
+                            evalClass = "eval-mate";
+                            evalValue = childPos.mate_in > 0 ? -10000 + childPos.mate_in : 10000 + childPos.mate_in;
+                        } else if (childPos.eval_cp !== null && childPos.eval_cp !== undefined) {
+                            const negEval = -childPos.eval_cp;
+                            evalValue = negEval;
+                            evalText = (negEval / 100).toFixed(2);
+                            if (negEval > 0) evalText = "+" + evalText;
+                            evalClass = negEval > 0 ? "eval-positive" : "eval-negative";
+                        }
+
+                        movesData.push({
+                            move: move,
+                            childFen: childFen,
+                            evalValue,
+                            evalText,
+                            evalClass,
+                            bestMove: childPos.best_move
+                        });
+                    });
+
+                    movesData.sort((a, b) => b.evalValue - a.evalValue);
+                }
+            }
+
+            // Always create exactly 3 slots
+            for (let i = 0; i < 3; i++) {
+                const data = movesData[i];
+                const moveEl = document.createElement("div");
+                moveEl.className = "move-item";
+                moveEl.style.padding = Math.floor(sizes.baseUnit * 0.6) + 'px ' + Math.floor(sizes.baseUnit * 0.9) + 'px';
+                moveEl.style.marginBottom = Math.floor(sizes.baseUnit * 0.2) + 'px';
+
+                if (data) {
+                    moveEl.onclick = () => makeMove(data.move, data.childFen);
+                    
+                    const moveRow = document.createElement("div");
+                    moveRow.className = "move-row";
+                    moveRow.style.fontSize = sizes.moveFontSize + 'px';
+                    
+                    const moveSpan = document.createElement("span");
+                    moveSpan.textContent = data.move;
+                    
+                    const evalSpan = document.createElement("span");
+                    evalSpan.className = `move-eval ${data.evalClass}`;
+                    evalSpan.style.fontSize = sizes.moveEvalFontSize + 'px';
+                    evalSpan.style.padding = sizes.moveEvalPadding;
+                    evalSpan.textContent = data.evalText;
+                    
+                    moveRow.appendChild(moveSpan);
+                    moveRow.appendChild(evalSpan);
+                    moveEl.appendChild(moveRow);
+                    
+                    if (data.bestMove) {
+                        const contDiv = document.createElement("div");
+                        contDiv.className = "move-continuation";
+                        contDiv.style.fontSize = sizes.continuationFontSize + 'px';
+                        contDiv.style.marginTop = Math.floor(sizes.baseUnit * 0.2) + 'px';
+                        contDiv.textContent = `→ ${data.bestMove}`;
+                        moveEl.appendChild(contDiv);
+                    }
+                } else {
+                    // Empty placeholder
+                    moveEl.style.background = "rgba(0,0,0,0.2)";
+                    moveEl.innerHTML = `<div class="move-row"><span>&nbsp;</span></div>`;
+                }
+
+                movesList.appendChild(moveEl);
+            }
+
+            updateNavButtons();
+        }
+
+        // Make move
+        function makeMove(move, childFen) {
+            if (!childFen) return;
+            moveHistory.push({ move, fen: currentFEN });
+            displayPosition(childFen);
+        }
+
+        // Navigation
+        function goToStart() {
+            if (!bookData) return;
+            moveHistory = [];
+            const startFen = Object.keys(bookData).find(fen => 
+                fen.includes('rnbqkbnr/pppppppp')) || Object.keys(bookData)[0];
+            displayPosition(startFen);
+        }
+
+        function goBack() {
+            if (moveHistory.length > 0) {
+                const last = moveHistory.pop();
+                displayPosition(last.fen);
+            }
+        }
+
+        function goForward() {
+            if (!bookData || !currentFEN) return;
+            const position = bookData[currentFEN];
+            if (position && position.best_child_fen) {
+                moveHistory.push({ move: position.best_move, fen: currentFEN });
+                displayPosition(position.best_child_fen);
+            }
+        }
+
+        function goToEnd() {
+            if (!bookData || !currentFEN) return;
+            let tempFEN = currentFEN;
+            let position = bookData[tempFEN];
+            
+            while (position && position.best_child_fen) {
+                moveHistory.push({ move: position.best_move, fen: tempFEN });
+                tempFEN = position.best_child_fen;
+                position = bookData[tempFEN];
+            }
+            
+            displayPosition(tempFEN);
+        }
+
+        function updateNavButtons() {
+            const hasHistory = moveHistory.length > 0;
+            document.getElementById('backBtn').disabled = !hasHistory;
+            document.getElementById('startBtn').disabled = !hasHistory;
+            
+            const position = bookData && bookData[currentFEN];
+            const hasBest = position && position.best_child_fen;
+            document.getElementById('forwardBtn').disabled = !hasBest;
+            document.getElementById('endBtn').disabled = !hasBest;
+        }
+
+        // Draw graph
+        function drawGraph() {
+            const canvas = document.getElementById('analysisGraph');
+            if (!canvas || !logData || logData.length === 0) return;
+            
+            const ctx = canvas.getContext('2d');
+            const isFullscreen = document.fullscreenElement === canvas;
+            
+            if (isFullscreen) {
+                canvas.width = window.screen.width;
+                canvas.height = window.screen.height;
+            } else {
+                const rect = canvas.parentElement.getBoundingClientRect();
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+            }
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = isFullscreen ? 40 : 25;
+            
+            // White background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, width, height);
+            
+            // Grid
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.lineWidth = 0.5;
+            
+            for (let val = -10; val <= 10; val += 2) {
+                const y = height - padding - ((val + 10) / 20) * (height - 2 * padding);
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(width - padding, y);
+                ctx.stroke();
+                
+                if (val === 0) {
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+                    ctx.lineWidth = 0.5;
+                }
+                
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                ctx.font = isFullscreen ? '16px Arial' : '10px monospace';
+                ctx.textAlign = 'right';
+                ctx.fillText(val.toString(), padding - 5, y + 3);
+            }
+
+            const yZero = height - padding - (10/20) * (height - 2 * padding);
+
+            for (let i = 200; i <= logData.length; i += 200) {
+                const x = padding + ((i - 1) / Math.max(logData.length - 1, 1)) * (width - 2 * padding);
+                
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(x, padding);
+                ctx.lineTo(x, height - padding);
+                ctx.stroke();
+                
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                ctx.font = isFullscreen ? '16px Arial' : '10px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(i.toString(), x, yZero + (isFullscreen ? 20 : 10));
+            }
+            
+            // Draw points
+            const xStep = (width - 2 * padding) / Math.max(logData.length - 1, 1);
+            const dotSize = isFullscreen ? 2 : 1;
+            
+            logData.forEach((analysis, i) => {
+                const x = padding + i * xStep;
+                
+                // Get initial eval (cp value before analysis)
+                let initialEval = analysis.eval;
+                if (initialEval > 10) initialEval = 10;
+                if (initialEval < -10) initialEval = -10;
+                
+                const initialY = height - padding - ((initialEval + 10) / 20) * (height - 2 * padding);
+                
+                // Get alt1 (best move) eval if exists
+                if (analysis.alternatives && analysis.alternatives.length > 0) {
+                    const alt1 = analysis.alternatives[0];
+                    let alt1Eval = alt1.eval;
+                    if (alt1Eval > 10) alt1Eval = 10;
+                    if (alt1Eval < -10) alt1Eval = -10;
+                    
+                    const alt1Y = height - padding - ((alt1Eval + 10) / 20) * (height - 2 * padding);
+                    
+                    // Compare alt1 with initial
+                    if (Math.abs(alt1Eval - initialEval) < 0.01) {
+                        // Same value - draw only one grey dot
+                        ctx.fillStyle = '#ccc';
+                        ctx.beginPath();
+                        ctx.arc(x, initialY, dotSize, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else {
+                        // Draw initial grey dot
+                        ctx.fillStyle = '#ccc';
+                        ctx.beginPath();
+                        ctx.arc(x, initialY, dotSize, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Draw alt1 dot - green if better, red if worse
+                        if (alt1Eval > initialEval) {
+                            ctx.fillStyle = '#4caf50'; // Green
+                        } else {
+                            ctx.fillStyle = '#f44336'; // Red
+                        }
+                        ctx.beginPath();
+                        ctx.arc(x, alt1Y, dotSize, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                } else {
+                    // No alternatives - draw only initial grey dot
+                    ctx.fillStyle = '#757575';
+                    ctx.beginPath();
+                    ctx.arc(x, initialY, dotSize, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+        }
+
+        // Fullscreen
+        function openFullscreen() {
+            const canvas = document.getElementById('analysisGraph');
+            if (canvas.requestFullscreen) {
+                canvas.requestFullscreen();
+            } else if (canvas.webkitRequestFullscreen) {
+                canvas.webkitRequestFullscreen();
+            }
+            
+            document.addEventListener('fullscreenchange', handleFullscreenChange);
+            document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        }
+
+        function handleFullscreenChange() {
+            setTimeout(() => drawGraph(), 50);
+        }
+
+        // Toast notification
+        function showToast(message, type) {
+            const sizes = calculateBoardSize();
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            toast.style.padding = sizes.toastPadding;
+            toast.style.fontSize = sizes.toastFontSize + 'px';
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+				
+				function toggleTheme() {
+						document.body.classList.toggle('light');
+				}
+				
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize with standard 8x8 board
+            initBoard('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+            
+            document.getElementById('startBtn').addEventListener('click', goToStart);
+            document.getElementById('backBtn').addEventListener('click', goBack);
+            document.getElementById('forwardBtn').addEventListener('click', goForward);
+            document.getElementById('endBtn').addEventListener('click', goToEnd);
+            
+            updateNavButtons();
+        });
+
+        // Debounced resize handler
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                // Update all sizes when window resizes
+                if (currentFEN) {
+                    updateAllSizes();
+                }
+                
+                if (logData.length > 0) {
+                    drawGraph();
+                }
+            }, 100); // Debounce for 100ms
+        });
+    </script>
+</body>
+</html>
