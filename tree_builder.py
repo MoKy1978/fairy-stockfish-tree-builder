@@ -79,7 +79,7 @@ class FairyStockfishEngine:
     def multipv(self, fen: str) -> List[Tuple[str, Optional[int], Optional[int]]]:
         self.send(f"position fen {fen}")
         self.send(f"go depth {DEPTH}")
-        results = []
+        pv_data = {}
         for line in self.receive("bestmove"):
             if "multipv" not in line:
                 continue
@@ -87,19 +87,22 @@ class FairyStockfishEngine:
             try:
                 if int(parts[parts.index("depth") + 1]) != DEPTH:
                     continue
+                multipv_num = int(parts[parts.index("multipv") + 1])
+                if multipv_num > MULTIPV:
+                    continue
                 move = parts[parts.index("pv") + 1]
-                if parts[parts.index("score") + 1] == "cp":
-                    eval_cp = int(parts[parts.index("score") + 2])
-                    mate_in = None
-                elif parts[parts.index("score") + 1] == "mate":
-                    mate_in = int(parts[parts.index("score") + 2])
-                    eval_cp = None
-                else:
-                    eval_cp = mate_in = None
-                results.append((move, eval_cp, mate_in))
+                eval_cp = None
+                mate_in = None
+                if "score" in parts:
+                    score_idx = parts.index("score")
+                    if parts[score_idx + 1] == "cp":
+                        eval_cp = int(parts[score_idx + 2])
+                    elif parts[score_idx + 1] == "mate":
+                        mate_in = int(parts[score_idx + 2])
+                pv_data[multipv_num] = (move, eval_cp, mate_in)
             except (ValueError, IndexError):
                 continue
-        return results
+        return [pv_data[i] for i in sorted(pv_data.keys())]
     
     def quit(self):
         if self.process.poll() is None:
@@ -152,7 +155,7 @@ class TreeBuilder:
         leaf = current_fen
         analysis = self.engine.multipv(leaf)
         msg = f"\nAnalysis #{self.analyzed_count + 1}"
-        msg += f"\ncp {pos.eval_cp or 0}"
+        msg += f"\ncp {pos.eval_cp}"
         msg += f"\npv {' '.join(moves)}"
         print(msg)
         self.log.write(msg + "\n")
@@ -199,6 +202,8 @@ class TreeBuilder:
         best_index = 0
         best_child_fen = pos.children_fens[0]
         best_child = self.positions[best_child_fen]
+        pos.best_move = pos.moves_to_children[0]
+        pos.best_child_fen = best_child_fen
         for child_idx, child_fen in enumerate(pos.children_fens[1:], 1):
             child = self.positions[child_fen]
             ce, be = child.eval_cp, best_child.eval_cp
@@ -294,5 +299,4 @@ def main():
     builder.build()
 
 if __name__ == '__main__':
-
     main()
