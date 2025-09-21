@@ -63,8 +63,8 @@ class Engine:
                 break
         return lines
 
-    def get_fen(self, position_cmd: str = "position startpos") -> str:
-        self.send(position_cmd)
+    def get_fen(self, command: str = "position startpos") -> str:
+        self.send(command)
         self.send("d")
         lines = self.receive("Sfen:")
         for line in lines:
@@ -72,7 +72,7 @@ class Engine:
                 return line.split("Fen:", 1)[1].strip()
         return ""
     
-    def multipv(self, fen: str) -> List[Tuple[str, Optional[int], Optional[int]]]:
+    def multipv(self, fen: str) -> List[Tuple[str, int]]
         self.send(f"position fen {fen}")
         self.send(f"go depth {DEPTH}")
         pv_data = {}
