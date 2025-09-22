@@ -11,7 +11,7 @@ ENGINE = 'stockfish.exe' if platform.system() == 'Windows' else 'stockfish'
 THREADS = 4
 HASH = 8192
 MULTIPV = 6
-DEPTH = 20
+DEPTH = 16
 
 @dataclass
 class Position:
@@ -72,7 +72,7 @@ class Engine:
                 return line.split("Fen:", 1)[1].strip()
         return ""
     
-    def multipv(self, fen: str) -> List[Tuple[str, int]]
+    def multipv(self, fen: str) -> List[Tuple[str, int]]:
         self.send(f"position fen {fen}")
         self.send(f"go depth {DEPTH}")
         pv_data = {}
@@ -121,52 +121,28 @@ class Tree:
         if not self.data_path.exists():
             self.new_tree()
             return
-            
         with open(self.data_path, 'r') as f:
             for line in f:
                 line = line.strip()
                 if not line or line.startswith('%'):
                     continue
                 parts = line.rstrip(';').split(';')
-                token = parts[0].strip().split('|')
+                token = parts[0].split('|')
                 idx = int(token[0])
-                analysis = int(token[1]) if len(token) > 1 else 0
-                leaf_distance = int(token[2]) if len(token) > 2 else 0
-                fen = parts[1].strip()
+                analysis = int(token[1])
+                leaf_distance = int(token[2])
+                fen = parts[1]
                 moves = []
                 evals = []
                 indices = []
-                if analysis > 0:
-                    for part in range(2, len(parts)):
-                        token = parts[part].strip()
-                        if not token:
-                            continue
-                        alt_data = token.split('|')
-                        if len(alt_data) != 4:
-                            continue
-                        alt = int(alt_data[0])
-                        move = alt_data[1]
-                        adjusted_score = int(alt_data[2])
-                        child_idx = int(alt_data[3])
-                        
-                        while len(moves) <= alt:
-                            moves.append('')
-                            evals.append(0)
-                            indices.append(-1)
-                        
-                        moves[alt] = move
-                        evals[alt] = adjusted_score
-                        indices[alt] = child_idx
-                
+                for alt in range(2, len(parts)):
+                    alt_data = parts[alt].split('|')
+                    moves.append(alt_data[1])
+                    evals.append(int(alt_data[2]))
+                    indices.append(int(alt_data[3]))
                 pos = Position(fen, analysis, leaf_distance, evals, moves, indices)
-                
-                while len(self.positions) <= idx:
-                    self.positions.append(None)
                 self.positions[idx] = pos
                 self.fen_to_index[fen] = idx
-                
-                if idx == 0:
-                    self.root_index = 0
                 if analysis > self.analysis_counter:
                     self.analysis_counter = analysis
 
@@ -186,7 +162,7 @@ class Tree:
     
     def save_data(self):
         lines = []
-        lines.append("% Tree Explorer: index|analyzed; fen; multipv|move|adjusted_score|child_index;")
+        lines.append("% Tree Explorer: position_index|analysis_number|leaf_distance; fen_string; alternative_number|move_string|adjusted_score|child_index;")
         for idx, pos in enumerate(self.positions):
             parts = [f"{idx}|{pos.analysis}|{pos.leaf_distance}", pos.fen]
             for alt in range(len(pos.evals)):
@@ -235,7 +211,7 @@ class Tree:
         champion = -30000
         for alt in range(1, len(pos.indices)):
             child = self.positions[pos.indices[alt]]
-            challenger = -child.evals[0] - 10 * child.leaf_distance
+            challenger = -3 * child.evals[0] - DEPTH * child.leaf_distance
             if challenger > champion:
                 champion = challenger
                 pos.moves[0] = pos.moves[alt]
