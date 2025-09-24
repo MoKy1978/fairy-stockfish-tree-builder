@@ -44,7 +44,7 @@
 ## Project Structure
 
 ```
-tree-explorer/
+trees/
 ├── tree_explorer.py    # Main exploration engine
 ├── tree_viewer.html    # Interactive web visualization
 ├── README.md          
@@ -76,19 +76,9 @@ python3 tree_explorer.py
 
 ### Examples
 
-Standard chess with increased resources:
+Tic-tac-toe with increased resources:
 ```bash
-python3 tree_explorer.py --threads 8 --hash 16384 --depth 30
-```
-
-Crazyhouse variant analysis:
-```bash
-python3 tree_explorer.py --variant crazyhouse --engine ./fairy-stockfish --multipv 8
-```
-
-Custom engine path:
-```bash
-python3 tree_explorer.py --engine /usr/local/bin/stockfish-16
+python3 tree_explorer.py --variant tictactoe --engine /usr/local/bin/stockfish-17 --threads 16 --hash 16384 --multipv 10 --depth 28
 ```
 
 ## How It Works
