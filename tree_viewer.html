@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Tree Viewer</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #fafafa;
+  padding: 1vh 1vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.container {
+  display: flex;
+  gap: 20px;
+  height: 100%;
+  max-width: 100%;
+}
+
+.board-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  max-height: 100%;
+  align-items: center;
+}
+
+.board-area {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.board-container {
+  width: calc(min(85vh, 65vw));
+  height: calc(min(85vh, 65vw));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+#board {
+  display: grid;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.bank {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 5px;
+  min-width: 50px;
+  align-items: center;
+}
+
+.bank#whiteBank {
+  flex-direction: column-reverse;
+  justify-content: flex-start;
+}
+
+.bank#blackBank {
+  justify-content: flex-start;
+}
+
+.bank-piece {
+  font-size: 40px;
+  line-height: 1;
+}
+
+.square {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.square.light { background: #f0d9b5; }
+.square.dark { background: #b58863; }
+
+.controls {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.controls button {
+  width: 70px;
+  height: 45px;
+  background: #fff;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  font-size: 22px;
+}
+
+.controls button:hover:not(:disabled) {
+  background: #f0f0f0;
+}
+
+.controls button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.side {
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.moves {
+  background: #fff;
+  border: 1px solid #ddd;
+  padding: 10px;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.move {
+  display: block;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.move:hover {
+  background: #e8e8e8;
+  transform: translateX(2px);
+}
+
+.move.best {
+  background: #c8e6c9;
+  border-color: #4caf50;
+  font-weight: 600;
+}
+
+.move .score {
+  float: right;
+  color: #666;
+  font-weight: normal;
+}
+
+.info {
+  margin-top: 15px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  font-size: 13px;
+  color: #666;
+  line-height: 1.6;
+  flex-shrink: 0;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 2px 0;
+}
+
+.load {
+  margin-top: 15px;
+  flex-shrink: 0;
+}
+
+.load button {
+  padding: 8px 20px;
+  background: #fff;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  font-size: 14px;
+  width: 100%;
+}
+
+.load button:hover {
+  background: #f0f0f0;
+}
+
+input[type="file"] {
+  display: none;
+}
+
+@media (min-width: 1920px) {
+  .board-container {
+    width: calc(min(85vh, 1200px));
+    height: calc(min(85vh, 1200px));
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+    padding: 5px;
+  }
+  
+  .board-container {
+    width: calc(min(50vh, 90vw));
+    height: calc(min(50vh, 90vw));
+  }
+  
+  .side {
+    width: 100%;
+  }
+  
+  .controls button {
+    width: 60px;
+    height: 40px;
+    font-size: 18px;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="board-section">
+    <div class="board-area">
+      <div class="bank" id="whiteBank"></div>
+      <div class="board-container">
+        <div id="board"></div>
+      </div>
+      <div class="bank" id="blackBank"></div>
+    </div>
+    <div class="controls">
+      <button id="btnStart">⏮</button>
+      <button id="btnBack">◀</button>
+      <button id="btnForward">▶</button>
+      <button id="btnEnd">⏭</button>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="moves" id="moves"></div>
+    <div class="info" id="info">
+      <div class="info-row">
+        <span>Position:</span>
+        <span id="posInfo">0</span>
+      </div>
+      <div class="info-row">
+        <span>Score:</span>
+        <span id="scoreInfo">0</span>
+      </div>
+      <div class="info-row">
+        <span>Best child:</span>
+        <span id="bestInfo">-</span>
+      </div>
+      <div class="info-row">
+        <span>Length to leaf:</span>
+        <span id="lengthInfo">0</span>
+      </div>
+      <div class="info-row">
+        <span>Depth:</span>
+        <span id="depthInfo">0</span>
+      </div>
+    </div>
+    <div class="load">
+      <button id="btnLoad">Load File</button>
+      <input type="file" id="fileInput" accept=".txt">
+    </div>
+  </div>
+</div>
+
+<script>
+let tree = {
+  fen: [],
+  move: [],
+  score: [],
+  best: [],
+  children: [],
+  length: []
+};
+
+let currentIdx = 0;
+let history = [];
+let fileLoaded = false;
+
+const pieces = {
+  'K':'♔','Q':'♕','R':'♖','B':'♗','N':'♘','P':'♙',
+  'k':'♚','q':'♛','r':'♜','b':'♝','n':'♞','p':'♟',
+  
+  'W':'♖','w':'♜', // Wazir → Rook
+  'F':'♗','f':'♝', // Ferz → Bishop  
+  'H':'♘','h':'♞'  // Horse → Knight
+};
+
+function parseTreeFile(text) {
+  tree = {fen: [], move: [], score: [], best: [], children: [], length: []};
+  
+  for (let line of text.split('\n')) {
+    line = line.trim();
+    if (!line || line.startsWith('%')) continue;
+    
+    const parts = line.split(';').map(p => p.trim());
+    if (parts.length < 2) continue;
+    
+    const [idx, move, score, best, length] = parts[0].split('|');
+    const i = parseInt(idx);
+    
+    tree.fen[i] = parts[1];
+    tree.move[i] = move === 'None' ? null : move;
+    tree.score[i] = parseInt(score) || 0;
+    tree.best[i] = best === 'None' ? null : parseInt(best);
+    tree.length[i] = parseInt(length) || 0;
+    tree.children[i] = parts[2] ? 
+      parts[2].split(',').map(x => parseInt(x)).filter(x => !isNaN(x)) : [];
+  }
+  
+  fileLoaded = true;
+}
+
+function drawBoard() {
+  const board = document.getElementById('board');
+  const whiteBank = document.getElementById('whiteBank');
+  const blackBank = document.getElementById('blackBank');
+  
+  board.innerHTML = '';
+  whiteBank.innerHTML = '';
+  blackBank.innerHTML = '';
+  
+  const container = document.querySelector('.board-container');
+  const containerSize = container.clientWidth;
+  
+  const fen = tree.fen[currentIdx] || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+  
+  const parts = fen.split('[');
+  const position = parts[0].trim().split(' ')[0];
+  let bank = '';
+  if (parts.length > 1) {
+    bank = parts[1].split(']')[0];
+  }
+  
+  const rows = position.split('/');
+  
+  const ranks = rows.length;
+  let files = 0;
+  
+  rows.forEach(row => {
+    let count = 0;
+    for (let i = 0; i < row.length; i++) {
+      if (!isNaN(row[i])) {
+        count += parseInt(row[i]);
+      } else {
+        count++;
+        if (row[i + 1] === '~') i++;
+      }
+    }
+    files = Math.max(files, count);
+  });
+  
+  const squareSize = Math.floor(containerSize / Math.max(ranks, files));
+  
+  board.style.gridTemplateColumns = `repeat(${files}, ${squareSize}px)`;
+  board.style.gridTemplateRows = `repeat(${ranks}, ${squareSize}px)`;
+  board.style.width = `${files * squareSize}px`;
+  board.style.height = `${ranks * squareSize}px`;
+  
+  for (let r = 0; r < ranks; r++) {
+    const row = rows[r];
+    let f = 0;
+    
+    for (let i = 0; i < row.length; i++) {
+      const char = row[i];
+      
+      if (!isNaN(char)) {
+        for (let j = 0; j < parseInt(char); j++) {
+          const sq = document.createElement('div');
+          sq.className = `square ${(r + f) % 2 === 0 ? 'light' : 'dark'}`;
+          sq.style.width = `${squareSize}px`;
+          sq.style.height = `${squareSize}px`;
+          board.appendChild(sq);
+          f++;
+        }
+      } else {
+        const sq = document.createElement('div');
+        sq.className = `square ${(r + f) % 2 === 0 ? 'light' : 'dark'}`;
+        sq.style.width = `${squareSize}px`;
+        sq.style.height = `${squareSize}px`;
+        sq.style.fontSize = `${squareSize * 0.65}px`;
+        
+        let piece = char;
+        if (row[i + 1] === '~') i++;
+        sq.textContent = pieces[piece] || '';
+        
+        board.appendChild(sq);
+        f++;
+      }
+    }
+  }
+  
+  if (bank) {
+    for (let char of bank) {
+      if (pieces[char] || char.match(/[A-Za-z]/)) {
+        const piece = document.createElement('div');
+        piece.className = 'bank-piece';
+        piece.textContent = pieces[char] || char;
+        
+        if (char === char.toUpperCase()) {
+          whiteBank.appendChild(piece);
+        } else {
+          blackBank.appendChild(piece);
+        }
+      }
+    }
+  }
+}
+
+function updateDisplay() {
+  drawBoard();
+  
+  const moves = document.getElementById('moves');
+  moves.innerHTML = '';
+  
+  const children = tree.children[currentIdx] || [];
+  
+  if (children.length === 0 || !fileLoaded) {
+    moves.innerHTML = '<div style="color:#999;padding:10px">No moves available</div>';
+  } else {
+    children
+      .map(idx => ({
+        idx,
+        move: tree.move[idx],
+        score: tree.score[idx] || 0,
+        isBest: idx === tree.best[currentIdx]
+      }))
+      .sort((a, b) => a.score - b.score)
+      .forEach(child => {
+        const btn = document.createElement('div');
+        btn.className = child.isBest ? 'move best' : 'move';
+        btn.innerHTML = `${child.move || '#' + child.idx} <span class="score">${child.score < 0 ? '+' : ''}${-child.score}</span>`;
+        btn.onclick = () => {
+          history.push(currentIdx);
+          currentIdx = child.idx;
+          updateDisplay();
+        };
+        moves.appendChild(btn);
+      });
+  }
+  
+  document.getElementById('posInfo').textContent = currentIdx;
+  document.getElementById('scoreInfo').textContent = tree.score[currentIdx] || 0;
+  document.getElementById('bestInfo').textContent = tree.best[currentIdx] !== null && tree.best[currentIdx] !== undefined ? tree.best[currentIdx] : '-';
+  document.getElementById('lengthInfo').textContent = tree.length[currentIdx] || 0;
+  document.getElementById('depthInfo').textContent = history.length;
+  
+  const hasHistory = history.length > 0;
+  const hasBest = fileLoaded && tree.best[currentIdx] != null;
+  const isRoot = currentIdx === 0;
+  
+  document.getElementById('btnBack').disabled = !hasHistory;
+  document.getElementById('btnStart').disabled = isRoot || !fileLoaded;
+  document.getElementById('btnForward').disabled = !hasBest;
+  document.getElementById('btnEnd').disabled = !hasBest;
+}
+
+document.getElementById('btnStart').onclick = () => {
+  if (fileLoaded && currentIdx !== 0) {
+    currentIdx = 0;
+    history = [];
+    updateDisplay();
+  }
+};
+
+document.getElementById('btnBack').onclick = () => {
+  if (history.length > 0) {
+    currentIdx = history.pop();
+    updateDisplay();
+  }
+};
+
+document.getElementById('btnForward').onclick = () => {
+  if (fileLoaded && tree.best[currentIdx] != null) {
+    history.push(currentIdx);
+    currentIdx = tree.best[currentIdx];
+    updateDisplay();
+  }
+};
+
+document.getElementById('btnEnd').onclick = () => {
+  if (!fileLoaded) return;
+  
+  let moved = false;
+  let safety = 0;
+  
+  while (tree.best[currentIdx] != null && safety < 10000) {
+    history.push(currentIdx);
+    currentIdx = tree.best[currentIdx];
+    moved = true;
+    safety++;
+  }
+  
+  if (moved) {
+    updateDisplay();
+  }
+};
+
+document.getElementById('btnLoad').onclick = () => {
+  document.getElementById('fileInput').click();
+};
+
+document.getElementById('fileInput').onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  const text = await file.text();
+  parseTreeFile(text);
+  currentIdx = 0;
+  history = [];
+  updateDisplay();
+};
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft' && !document.getElementById('btnBack').disabled) {
+    document.getElementById('btnBack').click();
+  }
+  if (e.key === 'ArrowRight' && !document.getElementById('btnForward').disabled) {
+    document.getElementById('btnForward').click();
+  }
+  if (e.key === 'Home' && !document.getElementById('btnStart').disabled) {
+    document.getElementById('btnStart').click();
+  }
+  if (e.key === 'End' && !document.getElementById('btnEnd').disabled) {
+    document.getElementById('btnEnd').click();
+  }
+});
+
+let resizeTimeout;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    drawBoard();
+  }, 250);
+});
+
+updateDisplay();
+</script>
+
+</body>
+</html>
