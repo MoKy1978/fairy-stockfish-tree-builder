@@ -84,7 +84,6 @@ python3 tree_explorer.py --variant crazyhouse --engine ./fairy-stockfish --threa
 
 * Press **Ctrl+C** to stop exploration safely.
 * The program will:
-
   * Save all progress
   * Print the number of analyzed positions
   * Quit the engine gracefully
@@ -97,7 +96,6 @@ python3 tree_explorer.py --variant crazyhouse --engine ./fairy-stockfish --threa
 1. Start from the default chess position.
 2. The program picks a leaf node, analyzes candidate moves, and expands the tree.
 3. For each new child position:
-
    * Adds FEN to the tree
    * Stores engine evaluation
    * Updates minimax values recursively
@@ -108,8 +106,6 @@ python3 tree_explorer.py --variant crazyhouse --engine ./fairy-stockfish --threa
 ## Roadmap / Ideas
 
 * [ ] Add support for configurable evaluation functions beyond NNUE
-* [ ] Export tree in PGN or JSON format
-* [ ] Interactive exploration (GUI / web frontend)
 * [ ] Parallel exploration
 
 ---
