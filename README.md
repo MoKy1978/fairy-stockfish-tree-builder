@@ -130,7 +130,7 @@ Fields:
 - `move`: Move from parent
 - `score`: Evaluation (centipawns, negative favors Black)
 - `best`: Index of best child
-- `length`: Distance to deepest leaf
+- `length`: Distance to the best line leaf
 - `fen`: Position in FEN notation
 - `children`: Comma-separated child indices
 
