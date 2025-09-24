@@ -197,7 +197,7 @@ class Tree:
         try:
             while True:
                 self.analyze()
-                if time.time() - self.last_saved > 300:
+                if time.time() - self.last_saved > 900:
                     self.save_data()
         except Exception as e:
             print(f"\nError: {e}")
@@ -233,4 +233,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
