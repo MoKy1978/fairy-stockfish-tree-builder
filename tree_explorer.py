@@ -181,7 +181,7 @@ class Tree:
             for alt in self.children[idx]:
                 score = self.score[alt]
                 length = self.length[alt]
-                challenger = -score + length * abs(score + 1).bit_length() * (1 if score < 0 else -1)
+                challenger = -score + length * (1 if score < 0 else -1)
                 if challenger > champion:
                     champion = challenger
                     self.best[idx] = alt
@@ -233,3 +233,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
