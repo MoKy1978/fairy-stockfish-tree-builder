@@ -7,10 +7,10 @@
 * Automated deep position analysis with UCI engines
 * Support for standard chess and variants (via UCI_Variant)
 * MultiPV search for exploring multiple candidate moves
+* Evaluation with distance-to-leaf weighted minimax
 * Persistent storage with auto-save every 5 minutes
-* Sophisticated evaluation with length-weighted minimax
-* Interactive web-based visualization of explored trees
 * Safe interruption with progress preservation
+* Interactive web-based visualization of explored trees
 
 ## Requirements
 
