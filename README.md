@@ -74,7 +74,7 @@ python3 tree_explorer.py
 | `--multipv` | `6`         | Number of principal variations to analyze           |
 | `--depth`   | `24`        | Search depth for analysis                           |
 
-### Examples
+### Custom Example
 
 Tic-tac-toe with increased resources:
 ```bash
