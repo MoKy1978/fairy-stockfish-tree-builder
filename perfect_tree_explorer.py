@@ -14,7 +14,7 @@ ENGINE       = "/content/stockfish"
 VARIANT      = "tinyhouse"  #@param ["chess", "atomic", "antichess", "crazyhouse", "3check", "racingkings", "horde", "tinyhouse"]
 THREADS      = 4            #@param {type:"integer"}
 HASHMB       = 4096         #@param {type:"integer"}
-DEPTH = 30           #@param {type:"integer"}
+DEPTH        = 30           #@param {type:"integer"}
 
 from google.colab import drive
 drive.mount('/content/drive/')
